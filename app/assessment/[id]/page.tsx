@@ -200,12 +200,21 @@ export default function AssessmentResultPage() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Damage Assessment Report</h1>
           <p className="text-gray-600">Assessment ID: {assessment.assessmentId}</p>
-          <button
-            onClick={() => router.push('/')}
-            className="mt-4 text-blue-600 hover:text-blue-800 underline"
-          >
-            ← New Assessment
-          </button>
+          <div className="mt-4 flex items-center justify-center space-x-4">
+            <button
+              onClick={() => router.push('/')}
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              ← New Assessment
+            </button>
+            <span className="text-gray-400">|</span>
+            <button
+              onClick={() => router.push('/assessments')}
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              View All Assessments
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">

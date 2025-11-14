@@ -172,6 +172,12 @@ export default function CarAssessmentPage() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Car Damage Assessment</h1>
           <p className="text-lg text-gray-600">Upload an image of your vehicle for damage analysis</p>
+          <button
+            onClick={() => router.push('/assessments')}
+            className="mt-4 text-blue-600 hover:text-blue-800 underline text-sm"
+          >
+            View All Assessments
+          </button>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
