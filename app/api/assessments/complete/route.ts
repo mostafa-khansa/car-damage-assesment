@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongoose';
 import AssessmentModel from '@/models/Assessment';
 
-const N8N_WEBHOOK_URL = 'https://mostafa-khansa.app.n8n.cloud/webhook/c1ddc39d-4fd7-457b-9dd8-636287e8c758';
-const N8N_JWT_TOKEN = 'juhtbugibijtrgbijihjyhiyyyyyyyyyyyyyr0w9it9er98e87f6';
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL!;
+const N8N_JWT_TOKEN = process.env.N8N_JWT_TOKEN!;
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
