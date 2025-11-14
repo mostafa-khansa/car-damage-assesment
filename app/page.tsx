@@ -101,30 +101,28 @@ export default function CarAssessmentPage() {
     setIsUploading(true);
 
     try {
-      // Upload both files
-      const [beforeResponse, afterResponse] = await Promise.all([
-        fetch(`/api/assessments/upload?filename=before_${beforeFile.name}&type=before`, {
-          method: 'POST',
-          body: beforeFile,
-        }),
-        fetch(`/api/assessments/upload?filename=after_${afterFile.name}&type=after`, {
-          method: 'POST',
-          body: afterFile,
-        })
-      ]);
+      // Create FormData with both images
+      const formData = new FormData();
+      formData.append('beforeImage', beforeFile);
+      formData.append('afterImage', afterFile);
 
-      if (!beforeResponse.ok || !afterResponse.ok) {
-        throw new Error('Upload failed');
+      // Submit complete assessment with both images
+      const response = await fetch('/api/assessments/complete', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Assessment upload failed');
       }
 
-      const [beforeBlob, afterBlob] = await Promise.all([
-        beforeResponse.json() as Promise<PutBlobResult>,
-        afterResponse.json() as Promise<PutBlobResult>
-      ]);
-
-      setUploadResult({ beforeBlob, afterBlob });
+      const result = await response.json();
+      setUploadResult({ 
+        beforeBlob: result.beforeBlob, 
+        afterBlob: result.afterBlob 
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      setError(err instanceof Error ? err.message : 'Assessment upload failed');
     } finally {
       setIsUploading(false);
     }
