@@ -1,5 +1,7 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/mongoose';
+import AssessmentModel from '@/models/Assessment';
 
 const N8N_WEBHOOK_URL = 'https://mostafa-khansa.app.n8n.cloud/webhook/c1ddc39d-4fd7-457b-9dd8-636287e8c758';
 const N8N_JWT_TOKEN = 'juhtbugibijtrgbijihjyhiyyyyyyyyyyyyyr0w9it9er98e87f6';
@@ -37,7 +39,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       })
     ]);
 
-    // Call n8n webhook with both images
+    const assessmentId = `assessment_${Date.now()}`;
+
+    // Call n8n webhook and wait for response
+    let analysisResult = null;
+    let status = 'processing';
+
     try {
       const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
@@ -46,7 +53,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           'Authorization': `Bearer ${N8N_JWT_TOKEN}`,
         },
         body: JSON.stringify({
-          assessmentId: `assessment_${Date.now()}`,
+          assessmentId,
           beforeImage: {
             url: beforeBlob.url,
             filename: beforeFile.name,
@@ -66,21 +73,39 @@ export async function POST(request: Request): Promise<NextResponse> {
         }),
       });
 
-      if (!webhookResponse.ok) {
-        console.warn('n8n webhook call failed:', webhookResponse.status, webhookResponse.statusText);
+      if (webhookResponse.ok) {
+        analysisResult = await webhookResponse.json();
+        status = 'completed';
+        console.log('n8n webhook completed successfully');
+        console.log('Analysis result:', JSON.stringify(analysisResult).substring(0, 500) + '...');
       } else {
-        console.log('n8n webhook called successfully with both images');
+        console.warn('n8n webhook failed:', webhookResponse.status);
+        const errorText = await webhookResponse.text();
+        console.warn('Error response:', errorText);
+        status = 'failed';
       }
     } catch (webhookError) {
       console.error('Error calling n8n webhook:', webhookError);
-      // Don't fail the main upload if webhook fails
+      status = 'failed';
     }
+
+    // Save assessment to database with results
+    await connectToDatabase();
+    await AssessmentModel.create({
+      assessmentId,
+      beforeImageUrl: beforeBlob.url,
+      afterImageUrl: afterBlob.url,
+      status,
+      analysisResult,
+      completedAt: status === 'completed' ? new Date() : undefined,
+    });
 
     return NextResponse.json({
       beforeBlob,
       afterBlob,
-      assessmentId: `assessment_${Date.now()}`,
-      status: 'success',
+      assessmentId,
+      status,
+      analysisResult,
     });
 
   } catch (error) {

@@ -10,17 +10,26 @@ const DamageSchema = new Schema(
 
 const AssessmentSchema = new Schema(
   {
-    // Use string-based _id so you can pass values like "123" if desired
     _id: {
       type: String,
       default: () => new mongoose.Types.ObjectId().toHexString(),
     },
-    title: { type: String, required: true },
+    assessmentId: { type: String, required: true, unique: true },
     beforeImageUrl: { type: String, required: true },
     afterImageUrl: { type: String, required: true },
-    totalCost: { type: Number, required: true, min: 0 },
+    status: { 
+      type: String, 
+      enum: ['processing', 'completed', 'failed'], 
+      default: 'processing' 
+    },
+    // Store the full n8n webhook response
+    analysisResult: { type: Schema.Types.Mixed, default: null },
+    // Legacy fields for backward compatibility
+    title: { type: String },
+    totalCost: { type: Number, min: 0 },
     damages: { type: [DamageSchema], default: [] },
     createdAt: { type: Date, default: Date.now },
+    completedAt: { type: Date },
   },
   {
     versionKey: false,

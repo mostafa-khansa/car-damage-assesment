@@ -2,13 +2,20 @@
 
 import type { PutBlobResult } from '@vercel/blob';
 import { useState, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface UploadResult {
   beforeBlob: PutBlobResult | null;
   afterBlob: PutBlobResult | null;
 }
 
+interface AssessmentData {
+  status: string;
+  analysisResult: any;
+}
+
 export default function CarAssessmentPage() {
+  const router = useRouter();
   const beforeFileRef = useRef<HTMLInputElement>(null);
   const afterFileRef = useRef<HTMLInputElement>(null);
   const [uploadResult, setUploadResult] = useState<UploadResult>({ beforeBlob: null, afterBlob: null });
@@ -18,6 +25,7 @@ export default function CarAssessmentPage() {
   const [isDragOverBefore, setIsDragOverBefore] = useState(false);
   const [isDragOverAfter, setIsDragOverAfter] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [assessmentData, setAssessmentData] = useState<AssessmentData | null>(null);
 
   const handleFileSelect = useCallback((file: File, type: 'before' | 'after') => {
     setError(null);
@@ -117,10 +125,26 @@ export default function CarAssessmentPage() {
       }
 
       const result = await response.json();
-      setUploadResult({ 
-        beforeBlob: result.beforeBlob, 
-        afterBlob: result.afterBlob 
-      });
+      
+      // Redirect to results page
+      if (result.assessmentId) {
+        router.push(`/assessment/${result.assessmentId}`);
+      } else {
+        setUploadResult({ 
+          beforeBlob: result.beforeBlob, 
+          afterBlob: result.afterBlob 
+        });
+        
+        // Display results immediately if available (fallback)
+        if (result.status === 'completed' && result.analysisResult) {
+          setAssessmentData({
+            status: result.status,
+            analysisResult: result.analysisResult
+          });
+        } else if (result.status === 'failed') {
+          setError('Analysis failed. Please try again.');
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Assessment upload failed');
     } finally {
@@ -133,6 +157,7 @@ export default function CarAssessmentPage() {
     setBeforePreview(null);
     setAfterPreview(null);
     setError(null);
+    setAssessmentData(null);
     if (beforeFileRef.current) {
       beforeFileRef.current.value = '';
     }
@@ -288,7 +313,7 @@ export default function CarAssessmentPage() {
                 {isUploading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Uploading Images...</span>
+                    <span>Uploading & Analyzing Images...</span>
                   </div>
                 ) : (
                   'Start Damage Assessment'
@@ -308,6 +333,148 @@ export default function CarAssessmentPage() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Upload Successful!</h3>
                 <p className="text-gray-600">Both before and after damage images have been uploaded successfully.</p>
               </div>
+
+              {/* Assessment Results */}
+              {assessmentData && assessmentData.analysisResult && (() => {
+                const result = assessmentData.analysisResult[0]?.content[0];
+                if (!result) return null;
+                
+                // Extract JSON from the text field
+                const jsonMatch = result.text.match(/```json\n([\s\S]*?)\n```/);
+                if (!jsonMatch) return null;
+                
+                const assessment = JSON.parse(jsonMatch[1]);
+                
+                return (
+                  <div className="space-y-6 text-left">
+                    {/* Damage Summary */}
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-6">
+                      <h4 className="text-xl font-bold text-gray-900 mb-4">🚗 Damage Summary</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-600">Severity</p>
+                          <p className="text-lg font-semibold text-gray-900">{assessment.damage_summary.overall_severity}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Impact Type</p>
+                          <p className="text-lg font-semibold text-gray-900 capitalize">{assessment.damage_summary.impact_type}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-sm text-gray-600 mb-1">Description</p>
+                          <p className="text-sm text-gray-800">{assessment.damage_summary.impact_description}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cost Summary */}
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                      <h4 className="text-xl font-bold text-gray-900 mb-4">💰 Estimated Cost</h4>
+                      <div className="text-center">
+                        <p className="text-4xl font-bold text-green-700">
+                          ${assessment.cost_summary.grand_total_min.toLocaleString()} - ${assessment.cost_summary.grand_total_max.toLocaleString()}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-2">{assessment.cost_summary.currency}</p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-green-200">
+                        <div className="text-center">
+                          <p className="text-xs text-gray-600">Labor</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            ${assessment.cost_summary.labor_total_min} - ${assessment.cost_summary.labor_total_max}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-600">Paint</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            ${assessment.cost_summary.paint_materials_min} - ${assessment.cost_summary.paint_materials_max}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-600">Parts</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            ${assessment.cost_summary.parts_total_min} - ${assessment.cost_summary.parts_total_max}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Damaged Components */}
+                    <div className="bg-white border border-gray-200 rounded-xl p-6">
+                      <h4 className="text-xl font-bold text-gray-900 mb-4">🔧 Damaged Components</h4>
+                      <div className="space-y-4">
+                        {assessment.damaged_components.map((component: any, index: number) => (
+                          <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
+                            <h5 className="font-semibold text-gray-900">{component.component_name}</h5>
+                            <p className="text-sm text-gray-600 mt-1">{component.location}</p>
+                            <p className="text-sm text-gray-700 mt-2">{component.damage_type}</p>
+                            <div className="flex items-center space-x-4 mt-3">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                component.severity === 'Minor' ? 'bg-yellow-100 text-yellow-800' : 
+                                component.severity === 'Moderate' ? 'bg-orange-100 text-orange-800' : 
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {component.severity}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                {component.labor_hours}h labor · ${component.labor_cost_min}-${component.labor_cost_max}
+                              </span>
+                            </div>
+                            {component.notes && (
+                              <p className="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded">{component.notes}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Repair Options */}
+                    <div className="bg-white border border-gray-200 rounded-xl p-6">
+                      <h4 className="text-xl font-bold text-gray-900 mb-4">🛠️ Repair Options</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {assessment.repair_options.map((option: any, index: number) => (
+                          <div key={index} className="border border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+                            <h5 className="font-semibold text-gray-900 mb-2">{option.option_name}</h5>
+                            <p className="text-2xl font-bold text-blue-600 mb-2">
+                              ${option.total_cost_min.toLocaleString()} - ${option.total_cost_max.toLocaleString()}
+                            </p>
+                            <p className="text-sm text-gray-600 mb-2">
+                              <span className="font-medium">Estimated time:</span> {option.estimated_days} days
+                            </p>
+                            <p className="text-xs text-gray-700">{option.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Recommendations */}
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                      <h4 className="text-xl font-bold text-gray-900 mb-4">⚠️ Recommendations</h4>
+                      <ul className="space-y-2">
+                        {assessment.recommendations.map((rec: string, index: number) => (
+                          <li key={index} className="flex items-start space-x-2">
+                            <span className="text-yellow-600 mt-1">•</span>
+                            <span className="text-sm text-gray-700">{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Potential Hidden Damage */}
+                    {assessment.potential_hidden_damage && assessment.potential_hidden_damage.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                        <h4 className="text-xl font-bold text-gray-900 mb-4">🔍 Potential Hidden Damage</h4>
+                        <ul className="space-y-2">
+                          {assessment.potential_hidden_damage.map((damage: string, index: number) => (
+                            <li key={index} className="flex items-start space-x-2">
+                              <span className="text-red-600 mt-1">•</span>
+                              <span className="text-sm text-gray-700">{damage}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Image Links */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
