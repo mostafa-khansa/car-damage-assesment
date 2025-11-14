@@ -55,7 +55,23 @@ export default function AssessmentsListPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, analysisResult?: any) => {
+    // Check if it's a validation error
+    if (status === 'completed' && analysisResult?.[0]?.content?.[0]?.text) {
+      try {
+        const text = analysisResult[0].content[0].text;
+        const jsonMatch = text.match(/```json\s*\n([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+          if (data.validation_status === 'failed') {
+            return <span className="px-3 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full">Validation Failed</span>;
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    }
+    
     switch (status) {
       case 'completed':
         return <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Completed</span>;
@@ -195,7 +211,7 @@ export default function AssessmentsListPage() {
                           minute: '2-digit'
                         })}
                       </span>
-                      {getStatusBadge(assessment.status)}
+                      {getStatusBadge(assessment.status, assessment.analysisResult)}
                     </div>
 
                     <p className="text-xs text-gray-500 mb-2 font-mono truncate">

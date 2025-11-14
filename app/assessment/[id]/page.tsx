@@ -105,6 +105,8 @@ export default function AssessmentResultPage() {
   }
 
   let assessmentData;
+  let validationError = null;
+  
   try {
     console.log('Raw text from n8n:', result.text.substring(0, 500));
     
@@ -168,6 +170,11 @@ export default function AssessmentResultPage() {
       assessmentData = JSON.parse(fixedJson);
       console.log('Successfully parsed fixed JSON');
     }
+    
+    // Check if this is a validation error response
+    if (assessmentData.validation_status === 'failed') {
+      validationError = assessmentData;
+    }
   } catch (parseError) {
     console.error('JSON parse error:', parseError);
     console.error('Text content:', result.text);
@@ -188,6 +195,149 @@ export default function AssessmentResultPage() {
           >
             Back to Home
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If validation failed, show error page
+  if (validationError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Assessment Failed</h1>
+            <p className="text-gray-600">Assessment ID: {assessment.assessmentId}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
+            {/* Vehicle Images */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Before Image</h3>
+                <img
+                  src={assessment.beforeImageUrl}
+                  alt="Before"
+                  className="w-full h-64 object-cover rounded-lg border border-gray-200"
+                />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">After Image</h3>
+                <img
+                  src={assessment.afterImageUrl}
+                  alt="After"
+                  className="w-full h-64 object-cover rounded-lg border border-gray-200"
+                />
+              </div>
+            </div>
+
+            {/* Error Message */}
+            <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6">
+              <div className="flex items-start space-x-3">
+                <svg className="w-6 h-6 text-red-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <h4 className="text-xl font-bold text-red-900 mb-2">
+                    {validationError.error_code ? validationError.error_code.replace(/_/g, ' ') : 'Validation Error'}
+                  </h4>
+                  <p className="text-red-800 mb-4">{validationError.error_message}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Error Details */}
+            {validationError.error_details && (
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+                <h4 className="text-lg font-bold text-gray-900 mb-4">🔍 What We Found</h4>
+                <div className="space-y-3">
+                  {validationError.error_details.before_image_analysis && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700">Before Image Analysis:</p>
+                      <p className="text-sm text-gray-600 mt-1">{validationError.error_details.before_image_analysis}</p>
+                    </div>
+                  )}
+                  {validationError.error_details.after_image_analysis && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700">After Image Analysis:</p>
+                      <p className="text-sm text-gray-600 mt-1">{validationError.error_details.after_image_analysis}</p>
+                    </div>
+                  )}
+                  {validationError.error_details.issue_detected && (
+                    <div className="pt-3 border-t border-orange-200">
+                      <p className="text-sm font-semibold text-orange-800">Issue:</p>
+                      <p className="text-sm text-gray-700 mt-1">{validationError.error_details.issue_detected}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Customer Summary */}
+            {validationError.customer_summary && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                <h4 className="text-lg font-bold text-gray-900 mb-4">💡 What This Means</h4>
+                <div className="space-y-4">
+                  {validationError.customer_summary.bottom_line && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700">Bottom Line:</p>
+                      <p className="text-sm text-gray-600 mt-1">{validationError.customer_summary.bottom_line}</p>
+                    </div>
+                  )}
+                  {validationError.customer_summary.what_this_means && (
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700">Explanation:</p>
+                      <p className="text-sm text-gray-600 mt-1">{validationError.customer_summary.what_this_means}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Next Steps */}
+            {(validationError.suggested_action || validationError.customer_summary?.next_steps) && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+                <h4 className="text-lg font-bold text-gray-900 mb-4">✅ Next Steps</h4>
+                {validationError.suggested_action && (
+                  <p className="text-sm text-gray-700 mb-4">{validationError.suggested_action}</p>
+                )}
+                {validationError.customer_summary?.next_steps && (
+                  <ol className="space-y-2">
+                    {validationError.customer_summary.next_steps.map((step: string, index: number) => (
+                      <li key={index} className="flex items-start space-x-2">
+                        <span className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                          {index + 1}
+                        </span>
+                        <span className="text-sm text-gray-700 mt-0.5">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+              <button
+                onClick={() => router.push('/assessments')}
+                className="flex-1 bg-gray-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-gray-700 transition-colors"
+              >
+                View All Assessments
+              </button>
+              <button
+                onClick={() => router.push('/')}
+                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              >
+                Try Again with Correct Images
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
