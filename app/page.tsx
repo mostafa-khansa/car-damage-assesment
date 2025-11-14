@@ -3,15 +3,23 @@
 import type { PutBlobResult } from '@vercel/blob';
 import { useState, useRef, useCallback } from 'react';
 
+interface UploadResult {
+  beforeBlob: PutBlobResult | null;
+  afterBlob: PutBlobResult | null;
+}
+
 export default function CarAssessmentPage() {
-  const inputFileRef = useRef<HTMLInputElement>(null);
-  const [blob, setBlob] = useState<PutBlobResult | null>(null);
+  const beforeFileRef = useRef<HTMLInputElement>(null);
+  const afterFileRef = useRef<HTMLInputElement>(null);
+  const [uploadResult, setUploadResult] = useState<UploadResult>({ beforeBlob: null, afterBlob: null });
   const [isUploading, setIsUploading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
+  const [beforePreview, setBeforePreview] = useState<string | null>(null);
+  const [afterPreview, setAfterPreview] = useState<string | null>(null);
+  const [isDragOverBefore, setIsDragOverBefore] = useState(false);
+  const [isDragOverAfter, setIsDragOverAfter] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileSelect = useCallback((file: File) => {
+  const handleFileSelect = useCallback((file: File, type: 'before' | 'after') => {
     setError(null);
     
     // Validate file type
@@ -29,35 +37,52 @@ export default function CarAssessmentPage() {
     // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
-      setPreview(e.target?.result as string);
+      if (type === 'before') {
+        setBeforePreview(e.target?.result as string);
+      } else {
+        setAfterPreview(e.target?.result as string);
+      }
     };
     reader.readAsDataURL(file);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent, type: 'before' | 'after') => {
     e.preventDefault();
-    setIsDragOver(true);
+    if (type === 'before') {
+      setIsDragOverBefore(true);
+    } else {
+      setIsDragOverAfter(true);
+    }
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent, type: 'before' | 'after') => {
     e.preventDefault();
-    setIsDragOver(false);
+    if (type === 'before') {
+      setIsDragOverBefore(false);
+    } else {
+      setIsDragOverAfter(false);
+    }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent, type: 'before' | 'after') => {
     e.preventDefault();
-    setIsDragOver(false);
+    if (type === 'before') {
+      setIsDragOverBefore(false);
+    } else {
+      setIsDragOverAfter(false);
+    }
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
-      handleFileSelect(file);
+      handleFileSelect(file, type);
       
       // Update the input field
-      if (inputFileRef.current) {
+      const inputRef = type === 'before' ? beforeFileRef : afterFileRef;
+      if (inputRef.current) {
         const dt = new DataTransfer();
         dt.items.add(file);
-        inputFileRef.current.files = dt.files;
+        inputRef.current.files = dt.files;
       }
     }
   }, [handleFileSelect]);
@@ -66,29 +91,38 @@ export default function CarAssessmentPage() {
     event.preventDefault();
     setError(null);
 
-    if (!inputFileRef.current?.files) {
-      setError("No file selected");
+    if (!beforeFileRef.current?.files || !afterFileRef.current?.files) {
+      setError("Please select both before and after damage images");
       return;
     }
 
-    const file = inputFileRef.current.files[0];
+    const beforeFile = beforeFileRef.current.files[0];
+    const afterFile = afterFileRef.current.files[0];
     setIsUploading(true);
 
     try {
-      const response = await fetch(
-        `/api/assessments/upload?filename=${file.name}`,
-        {
+      // Upload both files
+      const [beforeResponse, afterResponse] = await Promise.all([
+        fetch(`/api/assessments/upload?filename=before_${beforeFile.name}&type=before`, {
           method: 'POST',
-          body: file,
-        },
-      );
+          body: beforeFile,
+        }),
+        fetch(`/api/assessments/upload?filename=after_${afterFile.name}&type=after`, {
+          method: 'POST',
+          body: afterFile,
+        })
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+      if (!beforeResponse.ok || !afterResponse.ok) {
+        throw new Error('Upload failed');
       }
 
-      const newBlob = (await response.json()) as PutBlobResult;
-      setBlob(newBlob);
+      const [beforeBlob, afterBlob] = await Promise.all([
+        beforeResponse.json() as Promise<PutBlobResult>,
+        afterResponse.json() as Promise<PutBlobResult>
+      ]);
+
+      setUploadResult({ beforeBlob, afterBlob });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
@@ -97,11 +131,15 @@ export default function CarAssessmentPage() {
   };
 
   const resetUpload = () => {
-    setBlob(null);
-    setPreview(null);
+    setUploadResult({ beforeBlob: null, afterBlob: null });
+    setBeforePreview(null);
+    setAfterPreview(null);
     setError(null);
-    if (inputFileRef.current) {
-      inputFileRef.current.value = '';
+    if (beforeFileRef.current) {
+      beforeFileRef.current.value = '';
+    }
+    if (afterFileRef.current) {
+      afterFileRef.current.value = '';
     }
   };
 
@@ -114,63 +152,118 @@ export default function CarAssessmentPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          {!blob ? (
-            <form onSubmit={handleFormSubmit} className="space-y-6">
-              {/* File Upload Area */}
-              <div
-                className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
-                  isDragOver
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <input
-                  name="file"
-                  ref={inputFileRef}
-                  type="file"
-                  accept="image/jpeg, image/png, image/webp"
-                  required
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelect(file);
-                  }}
-                />
-                
+          {!uploadResult.beforeBlob && !uploadResult.afterBlob ? (
+            <form onSubmit={handleFormSubmit} className="space-y-8">
+              {/* Two Upload Areas */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Before Damage Upload */}
                 <div className="space-y-4">
-                  <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
+                  <h3 className="text-lg font-semibold text-gray-900 text-center">Before Damage</h3>
+                  <div
+                    className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
+                      isDragOverBefore
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onDragOver={(e) => handleDragOver(e, 'before')}
+                    onDragLeave={(e) => handleDragLeave(e, 'before')}
+                    onDrop={(e) => handleDrop(e, 'before')}
+                  >
+                    <input
+                      name="beforeFile"
+                      ref={beforeFileRef}
+                      type="file"
+                      accept="image/jpeg, image/png, image/webp"
+                      required
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, 'before');
+                      }}
+                    />
+                    
+                    <div className="space-y-3">
+                      <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          Drop image here or <span className="text-green-600">browse</span>
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">Max 10MB</p>
+                      </div>
+                    </div>
                   </div>
                   
-                  <div>
-                    <p className="text-lg font-medium text-gray-900">
-                      Drop your image here, or <span className="text-blue-600">browse</span>
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Supports JPEG, PNG, WebP (max 10MB)
-                    </p>
+                  {/* Before Preview */}
+                  {beforePreview && (
+                    <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                      <img
+                        src={beforePreview}
+                        alt="Before damage preview"
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* After Damage Upload */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 text-center">After Damage</h3>
+                  <div
+                    className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
+                      isDragOverAfter
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onDragOver={(e) => handleDragOver(e, 'after')}
+                    onDragLeave={(e) => handleDragLeave(e, 'after')}
+                    onDrop={(e) => handleDrop(e, 'after')}
+                  >
+                    <input
+                      name="afterFile"
+                      ref={afterFileRef}
+                      type="file"
+                      accept="image/jpeg, image/png, image/webp"
+                      required
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, 'after');
+                      }}
+                    />
+                    
+                    <div className="space-y-3">
+                      <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          Drop image here or <span className="text-red-600">browse</span>
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">Max 10MB</p>
+                      </div>
+                    </div>
                   </div>
+                  
+                  {/* After Preview */}
+                  {afterPreview && (
+                    <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                      <img
+                        src={afterPreview}
+                        alt="After damage preview"
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Preview */}
-              {preview && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-900">Preview</h3>
-                  <div className="relative rounded-xl overflow-hidden border border-gray-200">
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="w-full h-64 object-cover"
-                    />
-                  </div>
-                </div>
-              )}
 
               {/* Error Message */}
               {error && (
@@ -191,16 +284,16 @@ export default function CarAssessmentPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isUploading || !preview}
+                disabled={isUploading || !beforePreview || !afterPreview}
                 className="w-full bg-blue-600 text-white py-3 px-6 rounded-xl font-medium text-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 {isUploading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Analyzing...</span>
+                    <span>Uploading Images...</span>
                   </div>
                 ) : (
-                  'Start Assessment'
+                  'Start Damage Assessment'
                 )}
               </button>
             </form>
@@ -215,41 +308,70 @@ export default function CarAssessmentPage() {
               
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Upload Successful!</h3>
-                <p className="text-gray-600">Your car image has been uploaded and is ready for assessment.</p>
+                <p className="text-gray-600">Both before and after damage images have been uploaded successfully.</p>
               </div>
 
-              <div className="bg-gray-50 rounded-xl p-6">
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Assessment Link</h4>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    value={blob.url}
-                    readOnly
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
-                  />
-                  <button
-                    onClick={() => navigator.clipboard.writeText(blob.url)}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium"
-                  >
-                    Copy
-                  </button>
+              {/* Image Links */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Before Damage Image</h4>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={uploadResult.beforeBlob?.url || ''}
+                      readOnly
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white text-xs"
+                    />
+                    <button
+                      onClick={() => uploadResult.beforeBlob && navigator.clipboard.writeText(uploadResult.beforeBlob.url)}
+                      className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-xs font-medium"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">After Damage Image</h4>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={uploadResult.afterBlob?.url || ''}
+                      readOnly
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white text-xs"
+                    />
+                    <button
+                      onClick={() => uploadResult.afterBlob && navigator.clipboard.writeText(uploadResult.afterBlob.url)}
+                      className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-xs font-medium"
+                    >
+                      Copy
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex space-x-4">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
                 <a
-                  href={blob.url}
+                  href={uploadResult.beforeBlob?.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl font-medium text-center hover:bg-blue-700 transition-colors duration-200"
+                  className="flex-1 bg-green-600 text-white py-3 px-6 rounded-xl font-medium text-center hover:bg-green-700 transition-colors duration-200"
                 >
-                  View Image
+                  View Before Image
+                </a>
+                <a
+                  href={uploadResult.afterBlob?.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-red-600 text-white py-3 px-6 rounded-xl font-medium text-center hover:bg-red-700 transition-colors duration-200"
+                >
+                  View After Image
                 </a>
                 <button
                   onClick={resetUpload}
                   className="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-xl font-medium hover:bg-gray-300 transition-colors duration-200"
                 >
-                  Upload Another
+                  Upload New Set
                 </button>
               </div>
             </div>
