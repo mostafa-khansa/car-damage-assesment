@@ -33,5 +33,5 @@ export async function connectToDatabase(): Promise<void> {
         throw err;
     }
 }
-
+//
 export default DB;
