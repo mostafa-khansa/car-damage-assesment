@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const DB = mongoose;
+
 const uri = process.env.MONGODB_URI ?? '';
 
 if (!uri) {
@@ -12,7 +14,7 @@ if (!uri) {
     );
 }
 
-mongoose.set("strictQuery", false);
+DB.set("strictQuery", false);
 
 let isConnected = false;
 
@@ -23,7 +25,7 @@ export async function connectToDatabase(): Promise<void> {
     }
 
     try {
-        await mongoose.connect(uri);
+        await DB.connect(uri);
         isConnected = true;
         console.log("MongoDB connected");
     } catch (err) {
@@ -32,4 +34,4 @@ export async function connectToDatabase(): Promise<void> {
     }
 }
 
-export default mongoose;
+export default DB;
