@@ -77,10 +77,11 @@ export default function AssessmentsListPage() {
       if (!jsonMatch) return null;
       
       const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-      if (data.cost_summary) {
+      if (data.cost_summary && data.cost_summary.grand_total_min !== undefined) {
         return `$${data.cost_summary.grand_total_min.toLocaleString()} - $${data.cost_summary.grand_total_max.toLocaleString()}`;
       }
     } catch (e) {
+      // JSON parsing failed or incomplete
       return null;
     }
     return null;

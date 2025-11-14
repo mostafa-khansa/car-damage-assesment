@@ -266,35 +266,52 @@ export default function AssessmentResultPage() {
           </div>
 
           {/* Cost Summary */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
-            <h4 className="text-xl font-bold text-gray-900 mb-4">💰 Estimated Cost</h4>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-green-700">
-                ${assessmentData.cost_summary.grand_total_min.toLocaleString()} - ${assessmentData.cost_summary.grand_total_max.toLocaleString()}
+          {assessmentData.cost_summary && assessmentData.cost_summary.grand_total_min !== undefined && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+              <h4 className="text-xl font-bold text-gray-900 mb-4">💰 Estimated Cost</h4>
+              <div className="text-center">
+                <p className="text-4xl font-bold text-green-700">
+                  ${assessmentData.cost_summary.grand_total_min.toLocaleString()} - ${assessmentData.cost_summary.grand_total_max.toLocaleString()}
+                </p>
+                <p className="text-sm text-gray-600 mt-2">{assessmentData.cost_summary.currency}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-green-200">
+                <div className="text-center">
+                  <p className="text-xs text-gray-600">Labor</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    ${assessmentData.cost_summary.labor_total_min} - ${assessmentData.cost_summary.labor_total_max}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-600">Paint</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    ${assessmentData.cost_summary.paint_materials_min} - ${assessmentData.cost_summary.paint_materials_max}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-600">Parts</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    ${assessmentData.cost_summary.parts_total_min} - ${assessmentData.cost_summary.parts_total_max}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Incomplete Data Warning */}
+          {(!assessmentData.cost_summary || assessmentData.cost_summary.grand_total_min === undefined) && (
+            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-6">
+              <h4 className="text-xl font-bold text-gray-900 mb-4">⚠️ Incomplete Assessment Data</h4>
+              <p className="text-sm text-gray-700 mb-2">
+                The analysis response was truncated and some information may be missing. 
+                Available information is shown below.
               </p>
-              <p className="text-sm text-gray-600 mt-2">{assessmentData.cost_summary.currency}</p>
+              <p className="text-xs text-gray-600">
+                This can happen when the damage is severe and generates a very large report. 
+                The damaged components information below should still be accurate.
+              </p>
             </div>
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-green-200">
-              <div className="text-center">
-                <p className="text-xs text-gray-600">Labor</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  ${assessmentData.cost_summary.labor_total_min} - ${assessmentData.cost_summary.labor_total_max}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-600">Paint</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  ${assessmentData.cost_summary.paint_materials_min} - ${assessmentData.cost_summary.paint_materials_max}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-600">Parts</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  ${assessmentData.cost_summary.parts_total_min} - ${assessmentData.cost_summary.parts_total_max}
-                </p>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Damaged Components */}
           <div className="bg-white border border-gray-200 rounded-xl p-6">
