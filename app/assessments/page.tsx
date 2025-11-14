@@ -131,18 +131,18 @@ export default function AssessmentsListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-6 sm:py-12 px-3 sm:px-4 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">All Assessments</h1>
-              <p className="text-gray-600">Total: {pagination.total} assessments</p>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">All Assessments</h1>
+              <p className="text-sm sm:text-base text-gray-600">Total: {pagination.total} assessments</p>
             </div>
             <button
               onClick={() => router.push('/')}
-              className="bg-blue-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              className="bg-blue-600 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg sm:rounded-xl font-medium text-sm sm:text-base hover:bg-blue-700 active:scale-[0.98] transition-all whitespace-nowrap"
             >
               + New Assessment
             </button>
@@ -151,14 +151,14 @@ export default function AssessmentsListPage() {
 
         {/* Assessments Grid */}
         {assessments.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-6 sm:p-12 text-center">
+            <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4">
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No assessments yet</h3>
-            <p className="text-gray-600 mb-6">Create your first damage assessment to get started</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No assessments yet</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 px-2">Create your first damage assessment to get started</p>
             <button
               onClick={() => router.push('/')}
               className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700"
@@ -168,40 +168,40 @@ export default function AssessmentsListPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {assessments.map((assessment) => (
                 <div
                   key={assessment._id}
                   onClick={() => router.push(`/assessment/${assessment.assessmentId}`)}
-                  className="bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-2xl transition-shadow duration-200"
+                  className="bg-white rounded-lg sm:rounded-xl shadow-lg overflow-hidden cursor-pointer hover:shadow-2xl active:scale-[0.98] transition-all duration-200"
                 >
                   {/* Images */}
                   <div className="grid grid-cols-2 gap-1 bg-gray-100">
-                    <div className="relative h-40">
+                    <div className="relative h-32 sm:h-40">
                       <img
                         src={assessment.beforeImageUrl}
                         alt="Before"
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+                      <div className="absolute top-1 left-1 sm:top-2 sm:left-2 bg-green-500 text-white text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
                         Before
                       </div>
                     </div>
-                    <div className="relative h-40">
+                    <div className="relative h-32 sm:h-40">
                       <img
                         src={assessment.afterImageUrl}
                         alt="After"
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                      <div className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-red-500 text-white text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
                         After
                       </div>
                     </div>
                   </div>
 
                   {/* Info */}
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
+                  <div className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between mb-2 gap-2">
                       <span className="text-xs text-gray-500">
                         {new Date(assessment.createdAt).toLocaleDateString('en-US', {
                           month: 'short',
@@ -221,24 +221,24 @@ export default function AssessmentsListPage() {
                     {assessment.status === 'completed' && (() => {
                       const cost = getCostSummary(assessment);
                       return cost ? (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <p className="text-sm text-gray-600">Estimated Cost</p>
-                          <p className="text-lg font-bold text-green-600">{cost}</p>
+                        <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-200">
+                          <p className="text-xs sm:text-sm text-gray-600">Estimated Cost</p>
+                          <p className="text-base sm:text-lg font-bold text-green-600">{cost}</p>
                         </div>
                       ) : null;
                     })()}
 
                     {assessment.status === 'processing' && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-200">
                         <div className="flex items-center space-x-2">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                          <span className="text-sm text-gray-600">Analyzing...</span>
+                          <span className="text-xs sm:text-sm text-gray-600">Analyzing...</span>
                         </div>
                       </div>
                     )}
 
-                    <div className="mt-4">
-                      <button className="w-full bg-blue-50 text-blue-600 py-2 px-4 rounded-lg font-medium hover:bg-blue-100 transition-colors text-sm">
+                    <div className="mt-3 sm:mt-4">
+                      <button className="w-full bg-blue-50 text-blue-600 py-2 px-4 rounded-lg font-medium hover:bg-blue-100 active:bg-blue-200 transition-colors text-xs sm:text-sm">
                         View Report →
                       </button>
                     </div>
@@ -249,24 +249,24 @@ export default function AssessmentsListPage() {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center space-x-2">
+              <div className="mt-6 sm:mt-8 flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
                 <button
                   onClick={() => fetchAssessments(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                  className="px-4 py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-3 sm:px-4 py-2 bg-white text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Previous
                 </button>
                 
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center gap-1">
                   {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
                     <button
                       key={page}
                       onClick={() => fetchAssessments(page)}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      className={`px-3 sm:px-4 py-2 rounded-lg font-medium text-sm transition-colors min-w-[36px] ${
                         page === pagination.page
                           ? 'bg-blue-600 text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100'
                       }`}
                     >
                       {page}
@@ -277,7 +277,7 @@ export default function AssessmentsListPage() {
                 <button
                   onClick={() => fetchAssessments(pagination.page + 1)}
                   disabled={pagination.page === pagination.totalPages}
-                  className="px-4 py-2 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-3 sm:px-4 py-2 bg-white text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Next
                 </button>
